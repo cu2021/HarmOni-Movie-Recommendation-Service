@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Hybrid Movie Recommendation System</h1>
+        <p>Enter your User ID and a Movie Title to get recommendations.</p>
+
+        <form id="recommendationForm">
+            <label for="userId">User ID:</label>
+            <input type="number" id="userId" name="userId" required>
+
+            <label for="title">Movie Title:</label>
+            <input type="text" id="title" name="title" required>
+
+            <label for="topN">Number of Recommendations:</label>
+            <input type="number" id="topN" name="topN" value="10" required>
+
+            <button type="submit">Get Recommendations</button>
+        </form>
+
+        <div id="result">
+            <h2>Recommended Movies:</h2>
+            <div id="moviesGrid" class="movies-container"></div>
+        </div>
+    </div>
+
+    <script link="{{ url_for( 'static' , filename='main.js' )}}">
+    </script>
+</body>
+</html>

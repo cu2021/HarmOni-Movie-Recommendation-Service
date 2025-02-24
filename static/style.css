@@ -1,0 +1,118 @@
+/* General Styling */
+body {
+    font-family: "Poppins", sans-serif;
+    background-color: #0b0c10;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+/* Main Container */
+.container {
+    max-width: 90%;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Heading */
+h1 {
+    font-size: 2.5em;
+    color: #66fcf1;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 1.2em;
+    color: #c5c6c7;
+}
+
+/* Form Section */
+form {
+    background-color: #1f2833;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px auto;
+    width: 50%;
+    box-shadow: 0px 0px 10px rgba(0, 255, 255, 0.3);
+}
+
+input, button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: none;
+    font-size: 1em;
+}
+
+input {
+    background-color: #c5c6c7;
+    color: #000;
+    outline: none;
+}
+
+button {
+    background-color: #45a29e;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s ease;
+}
+
+button:hover {
+    background-color: #66fcf1;
+    color: #0b0c10;
+}
+
+/* Movies Grid */
+.movies-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    padding: 20px;
+    justify-items: center;
+}
+
+/* Movie Card */
+.movie-card {
+    background-color: #1f2833;
+    border-radius: 10px;
+    overflow: hidden;
+    text-align: center;
+    box-shadow: 0px 4px 8px rgba(0, 255, 255, 0.2);
+    transition: transform 0.3s ease-in-out;
+    width: 180px;
+}
+
+.movie-card:hover {
+    transform: scale(1.05);
+}
+
+/* Movie Poster */
+.movie-poster {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    border-bottom: 3px solid #66fcf1;
+}
+
+/* Movie Title */
+.movie-card h3 {
+    padding: 10px;
+    font-size: 1em;
+    color: #ffffff;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    form {
+        width: 80%;
+    }
+
+    .movies-container {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
