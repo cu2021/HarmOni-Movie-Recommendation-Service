@@ -1,0 +1,46 @@
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environment
+venv/
+.env
+
+# Ignore IDE and editor config files
+.idea/
+.vscode/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore log and cache files
+logs/
+*.log
+
+# Ignore compiled code
+*.so
+*.out
+*.o
+
+# Ignore dependency files
+*.lock
+
+# Ignore static files that may be auto-generated
+static/*.cache
+
+# Ignore database and data files if applicable
+*.sqlite3
+*.db
+data/
+
+# Ignore Node.js dependencies (if using npm for frontend)
+node_modules/
+package-lock.json
+
+# Ignore coverage reports
+coverage/
+.coverage
+htmlcov/
