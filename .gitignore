@@ -11,3 +11,6 @@ venv/
 # Ignore IDE and editor config files
 .idea/
 .vscode/
+
+# Ignore data files
+data/*
