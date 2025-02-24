@@ -1,6 +1,6 @@
 # HarmOni Movie Recommendation Service
 
-HarmOni is a sophisticated movie recommendation service designed to provide personalized movie suggestions based on user preferences and movie popularity. Developed using Python and Flask, it employs a hybrid recommendation system that integrates content-based filtering with Singular Value Decomposition (SVD) collaborative filtering, along with popularity filtering from the Internet Movie Database ([IMDB](https://www.imdb.com/)).
+HarmOni Movie Recommendation Service is a sophisticated movie recommendation service designed to provide personalized movie suggestions based on user preferences and movie popularity. Developed using Python and Flask, it employs a hybrid recommendation system that integrates content-based filtering with Singular Value Decomposition (SVD) collaborative filtering, along with popularity filtering from the Internet Movie Database ([IMDB](https://www.imdb.com/)).
 
 ## Features
 
