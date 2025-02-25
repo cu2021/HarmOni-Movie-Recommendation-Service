@@ -61,8 +61,8 @@ def test_recommend(client):
     assert response.status_code == 200
     data = response.json
     assert data["status"] is True
-    assert len(data["data"]["recommendedMovies"]) == 5  # Ensure 5 recommendations are returned
-
+    assert len(data["data"]["recommendedMovies"]) == 5 
+    
 def test_recommend_missing_title(client):
     """
     Tests the /recommend route when the movie title is missing from the request.
@@ -101,10 +101,9 @@ def test_recommend_invalid_userid(client):
     """
     response = client.get("/recommend?userId=abc&title=Inception")
     assert response.status_code == 400
-    assert b"invalid literal for int()" in response.data  # Check for error message
+    assert b"invalid literal for int()" in response.data 
 
 
-# Mocking the TMDb API for testing the poster URL retrieval
 def test_get_movie_poster(client):
     """
     Tests the get_movie_poster function by mocking the TMDb API response.
