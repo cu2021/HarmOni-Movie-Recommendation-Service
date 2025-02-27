@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from surprise import PredictionImpossible
+from scipy.sparse import csr_matrix,load_npz
 import pickle
 
 
@@ -26,6 +27,18 @@ def load_similarity_matrix():
     numpy.ndarray: Cosine similarity matrix.
     """
     return np.load(r"data/cosine_similarity2.npy")
+
+def load_alrge_similarity_matrix():
+    """
+    Load the precomputed content-based cosine similarity matrix.
+
+    Returns:
+    numpy.ndarray: Cosine similarity matrix.
+    """
+    cosine_similarity = load_npz(r"data/Ccosine_similarity (1).npz")
+    cosine_similarity = cosine_similarity2.toarray()
+    print("done loading cosine similarity")    
+    return cosine_similarity
 
 
 def load_model():
