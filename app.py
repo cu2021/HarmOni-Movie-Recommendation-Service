@@ -50,7 +50,7 @@ def recommend():
         result = recommendations.to_dict(orient="records")
 
         for movie in result:
-            movie["poster_url"] = get_movie_poster(movie["id"])
+            movie["poster_url"] = get_movie_poster(movie)
 
         return jsonify(
             {

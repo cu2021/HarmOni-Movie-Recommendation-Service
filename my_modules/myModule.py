@@ -124,6 +124,7 @@ def handle_new_user(
             "title",
             "release_date",
             "final_score",
+            "poster_path"
         ]
     ]
 
@@ -202,17 +203,18 @@ def compute_hybrid_score(qualified_movies, user_ratings_count, recency_weight, t
             "title",
             "release_date",
             "final_score",
+            "poster_path"
         ]
     ]
 
 
-def get_top_similar_movies(movie_index, count_matrix=count_matrix, top_n=62):
+def get_top_similar_movies(movie_index, count_matrix=count_matrix):
     # Compute similarity scores dynamically (only one movie vector at a time)
     movie_vector = count_matrix[movie_index]
     similarity_scores = cosine_similarity(movie_vector, count_matrix).flatten()
 
     # Get indices of top similar movies (excluding the movie itself)
-    similar_indices = similarity_scores.argsort()[::-1][1 : top_n + 1]
+    similar_indices = similarity_scores.argsort()[::-1][1 : 102]
 
     # Return similar movie indices and their similarity scores
     return similar_indices, similarity_scores[similar_indices]
@@ -272,11 +274,11 @@ def improved_hybrid_recommendations(
 
     # Get top content-based similar movies
     similar_movie_indices, similarity_scores = get_top_similar_movies(
-        index, count_matrix, top_n=62
+        index, count_matrix
     )
 
     recommended_movies = new_df.iloc[similar_movie_indices][
-        ["title", "id", "vote_count", "vote_average", "release_date"]
+        ["title", "id", "vote_count", "vote_average", "release_date","poster_path"]
     ].copy()
 
     recommended_movies["vote_count"] = (
@@ -346,7 +348,7 @@ def improved_hybrid_recommendations(
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 
 
-def get_movie_poster(movie_id):
+def get_movie_poster(movie):
     """
     Fetch movie poster URL from TMDb API.
 
@@ -356,10 +358,14 @@ def get_movie_poster(movie_id):
     Returns:
     str: The complete URL of the movie poster if available, otherwise None.
     """
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
-    response = requests.get(url)
-    data = response.json()
 
-    if "poster_path" in data and data["poster_path"]:
-        return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
+    if movie["poster_path"]:
+        return f"https://image.tmdb.org/t/p/w500{movie['poster_path']}"
+    else:
+        url = f"https://api.themoviedb.org/3/movie/{movie['id']}?api_key={TMDB_API_KEY}&language=en-US"
+        response = requests.get(url)
+        movie_data = response.json()
+        
+        if "poster_path" in movie_data and movie_data["poster_path"]:
+            return f"https://image.tmdb.org/t/p/w500{movie_data['poster_path']}"
     return None
