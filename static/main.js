@@ -25,8 +25,8 @@ document
             : "https://via.placeholder.com/200x300?text=No+Image";
           let movieCard = `
                         <div class="movie-card">
-                            <img src="${posterUrl}" alt="${movie.title_x}" class="movie-poster">
-                            <h3>${movie.title_x}</h3>
+                            <img src="${posterUrl}" alt="${movie.title}" class="movie-poster">
+                            <h3>${movie.title}</h3>
                         </div>
                     `;
           moviesContainer.innerHTML += movieCard;

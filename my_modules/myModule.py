@@ -1,8 +1,15 @@
+import requests
 import numpy as np
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import load_npz
 from surprise import PredictionImpossible
-from scipy.sparse import csr_matrix,load_npz
+import os
+from dotenv import load_dotenv
 import pickle
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def load_data():
@@ -14,31 +21,19 @@ def load_data():
     """
     ratings_df = pd.read_csv(r"data/ratings_small.csv")  # MovieLens ratings
     links_df = pd.read_csv(r"data/links_small.csv")  # TMDb and MovieLens ID mapping
-    new_df = pd.read_csv(r"data/merged_df.csv")  # Movie details
+    new_df = pd.read_csv(r"data/new_df_data (1).csv")  # Movies Dataset
 
     return ratings_df, links_df, new_df
 
 
-def load_similarity_matrix():
-    """
-    Load the precomputed content-based cosine similarity matrix.
+# def load_similarity_matrix():
+#     """
+#     Load the precomputed content-based cosine similarity matrix.
 
-    Returns:
-    numpy.ndarray: Cosine similarity matrix.
-    """
-    return np.load(r"data/cosine_similarity2.npy")
-
-def load_alrge_similarity_matrix():
-    """
-    Load the precomputed content-based cosine similarity matrix.
-
-    Returns:
-    numpy.ndarray: Cosine similarity matrix.
-    """
-    cosine_similarity = load_npz(r"data/Ccosine_similarity (1).npz")
-    cosine_similarity = cosine_similarity2.toarray()
-    print("done loading cosine similarity")    
-    return cosine_similarity
+#     Returns:
+#     numpy.ndarray: Cosine similarity matrix.
+#     """
+#     return np.load(r"data/cosine_similarity2.npy")
 
 
 def load_model():
@@ -54,11 +49,13 @@ def load_model():
 
 # Load Data & Model at Startup
 ratings_df, links_df, new_df = load_data()
-cosine_similarity2 = load_similarity_matrix()
 best_svd1 = load_model()
 
+# Load Count Matrix
+count_matrix = load_npz(r"data/count_matrix.npz")
+
 # Create Movie Index Mapping (Title to Index)
-indices = pd.Series(new_df.index, index=new_df["title_x"]).drop_duplicates()
+indices = pd.Series(new_df.index, index=new_df["title"]).drop_duplicates()
 
 
 def weighted_rating(x, C, m):
@@ -95,7 +92,9 @@ def match_tmdb_to_movielens(qualified_movies, links_df):
     return qualified_movies.dropna(subset=["movieId"]).astype({"movieId": "int"})
 
 
-def handle_new_user(qualified_movies, top_n, popularity_weight, similarity_weight):
+def handle_new_user(
+    qualified_movies, top_n, popularity_weight, similarity_weight, recency_weight
+):
     """
     Return recommendations for new users based only on content similarity and IMDb scores.
 
@@ -108,13 +107,24 @@ def handle_new_user(qualified_movies, top_n, popularity_weight, similarity_weigh
     Returns:
     DataFrame: Top N recommendations for a new user.
     """
-
-    # Compute Final Score for Sorting
+    # Compute Final Score for Sorting, Final Score (no SVD for new user)
     qualified_movies["final_score"] = (
         popularity_weight * qualified_movies["weighted_rating"]
     ) + (similarity_weight * qualified_movies["similarity_score"])
+
+    # Combine recency into final_score
+    qualified_movies["final_score"] = (
+        qualified_movies["final_score"] * (1 - recency_weight)
+        + qualified_movies["recency_score"] * recency_weight
+    )
+
     return qualified_movies.sort_values("final_score", ascending=False).head(top_n)[
-        ["id", "title_x", "weighted_rating", "final_score"]
+        [
+            "id",
+            "title",
+            "release_date",
+            "final_score",
+        ]
     ]
 
 
@@ -149,7 +159,7 @@ def predict_ratings(user_id, qualified_movies, best_svd_model, ratings_df, C):
     return qualified_movies
 
 
-def compute_hybrid_score(qualified_movies, user_ratings_count):
+def compute_hybrid_score(qualified_movies, user_ratings_count, recency_weight, top_n):
     """
     Compute final hybrid recommendation score with dynamic weighting.
 
@@ -160,22 +170,86 @@ def compute_hybrid_score(qualified_movies, user_ratings_count):
     Returns:
     DataFrame: Movies DataFrame with hybrid scores.
     """
+    # Dynamic Weighting
     if user_ratings_count < 10:
-        svd_weight = 0.5  # Less confidence in SVD for new users
+        svd_weight = 0.5
     elif user_ratings_count < 50:
         svd_weight = 0.6
     else:
-        svd_weight = 0.7  # Higher confidence for active users
+        svd_weight = 0.7
 
     imdb_weight = 1 - svd_weight
     qualified_movies["final_score"] = (
         svd_weight * qualified_movies["predicted_rating"]
-    ) + (imdb_weight * qualified_movies["weighted_rating"])
-    return qualified_movies
+        + imdb_weight * qualified_movies["weighted_rating"]
+    )
+
+    # Recency Boost
+    qualified_movies = _apply_recency_boost(qualified_movies)
+
+    # Combine recency with final_score
+    qualified_movies["final_score"] = (
+        qualified_movies["final_score"] * (1 - recency_weight)
+        + qualified_movies["recency_score"] * recency_weight
+    )
+
+    # Sort & Return
+    return qualified_movies.sort_values("final_score", ascending=False).head(
+        min(top_n, len(qualified_movies))
+    )[
+        [
+            "id",
+            "title",
+            "release_date",
+            "final_score",
+        ]
+    ]
+
+
+def get_top_similar_movies(movie_index, count_matrix=count_matrix, top_n=62):
+    # Compute similarity scores dynamically (only one movie vector at a time)
+    movie_vector = count_matrix[movie_index]
+    similarity_scores = cosine_similarity(movie_vector, count_matrix).flatten()
+
+    # Get indices of top similar movies (excluding the movie itself)
+    similar_indices = similarity_scores.argsort()[::-1][1 : top_n + 1]
+
+    # Return similar movie indices and their similarity scores
+    return similar_indices, similarity_scores[similar_indices]
+
+
+def _apply_recency_boost(df):
+    """
+    Helper function to parse release_date into a numeric year,
+    then create a 0–1 scaled 'recency_score' column in df.
+    """
+    # Parse year from release_date
+    df["year"] = pd.to_datetime(df["release_date"], errors="coerce").dt.year
+
+    # Fallback for rows with missing/invalid release_date
+    df["year"] = df["year"].fillna(df["year"].min())
+
+    # Scale years to [0,1] range
+    min_year = df["year"].min()
+    max_year = df["year"].max()
+    year_range = max_year - min_year if max_year != min_year else 1
+
+    df["recency_score"] = (df["year"] - min_year) / year_range
+
+    return df
 
 
 def improved_hybrid_recommendations(
-    user_id, title, top_n=10, popularity_weight=0.15, similarity_weight=0.85
+    user_id,
+    title,
+    best_svd_model=best_svd1,
+    new_df=new_df,
+    ratings_df=ratings_df,
+    links_df=links_df,
+    top_n=10,
+    popularity_weight=0.15,
+    similarity_weight=0.85,
+    recency_weight=0.2,
 ):
     """
     Generate hybrid recommendations combining content-based and collaborative filtering.
@@ -196,16 +270,15 @@ def improved_hybrid_recommendations(
     if index is None:
         raise ValueError(f"Movie title '{title}' not found in the dataset.")
 
-    # Get top similar movies using content-based filtering
-    similarity_scores = np.array(cosine_similarity2[index])
-    similar_movie_indices = similarity_scores.argsort()[::-1][
-        1:52
-    ]  # Get top 50 similar movies (excluding itself)
+    # Get top content-based similar movies
+    similar_movie_indices, similarity_scores = get_top_similar_movies(
+        index, count_matrix, top_n=62
+    )
 
     recommended_movies = new_df.iloc[similar_movie_indices][
-        ["title_x", "id", "vote_count", "vote_average", "release_date", "genres"]
-    ]
-    recommended_movies = recommended_movies.copy()
+        ["title", "id", "vote_count", "vote_average", "release_date"]
+    ].copy()
+
     recommended_movies["vote_count"] = (
         recommended_movies["vote_count"].fillna(0).astype(int)
     )
@@ -215,57 +288,78 @@ def improved_hybrid_recommendations(
 
     # Compute IMDb weighted rating
     C = recommended_movies["vote_average"].mean()
-    m = recommended_movies["vote_count"].quantile(0.60)
+    m = recommended_movies["vote_count"].quantile(0.65)
     recommended_movies["weighted_rating"] = recommended_movies.apply(
         lambda x: weighted_rating(x, C, m), axis=1
     )
 
-    # Filter low vote count movies
-    qualified_movies = recommended_movies[recommended_movies["vote_count"] >= m].copy()
+    # # Filter low vote count movies
+    # qualified_movies = recommended_movies[recommended_movies["vote_count"] >= m].copy()
 
-    # Reset index to align indices properly
-    qualified_movies = qualified_movies.reset_index(drop=True)
+    qualified_movies = recommended_movies.copy()
+    qualified_movies.reset_index(drop=True, inplace=True)
 
-    # Keep only the indices that are still present in qualified_movies
-    filtered_similarity_scores = pd.DataFrame(
+    # Merge similarity scores
+    similarity_df = pd.DataFrame(
         {
             "id": new_df.iloc[similar_movie_indices]["id"].values,
-            "similarity_score": similarity_scores[similar_movie_indices],
+            "similarity_score": similarity_scores,
         }
     )
 
-    # Merge to assign similarity scores properly
-    qualified_movies = qualified_movies.merge(
-        filtered_similarity_scores, on="id", how="left"
-    )
-
-    # Fill missing similarity scores (if any) with the minimum similarity
+    qualified_movies = recommended_movies.merge(similarity_df, on="id", how="left")
     qualified_movies["similarity_score"] = qualified_movies["similarity_score"].fillna(
         qualified_movies["similarity_score"].min()
     )
 
-    # # Ensure the length matches
-    # qualified_movies = qualified_movies.loc[filtered_indices]
-    # qualified_movies['similarity_score'] = filtered_similarity_scores
+    # Cold-start handling for new users
+    if user_id not in ratings_df["userId"].unique():
+        # Incorporate recency
+        qualified_movies = _apply_recency_boost(qualified_movies)
+
+        return handle_new_user(
+            qualified_movies,
+            top_n,
+            popularity_weight,
+            similarity_weight,
+            recency_weight,
+        )
 
     # Match MovieLens IDs before using SVD
     qualified_movies = match_tmdb_to_movielens(qualified_movies, links_df)
 
-    # Cold-start handling for new users
-    if user_id not in ratings_df["userId"].unique():
-        return handle_new_user(
-            qualified_movies, top_n, popularity_weight, similarity_weight
-        )
-
     # Predict ratings using SVD
     user_ratings_count = ratings_df[ratings_df["userId"] == user_id].shape[0]
     qualified_movies = predict_ratings(
-        user_id, qualified_movies, best_svd1, ratings_df, C
+        user_id, qualified_movies, best_svd_model, ratings_df, C
     )
 
     # Compute hybrid recommendation score
-    qualified_movies = compute_hybrid_score(qualified_movies, user_ratings_count)
+    qualified_movies = compute_hybrid_score(
+        qualified_movies, user_ratings_count, recency_weight, top_n
+    )
 
-    return qualified_movies.sort_values("final_score", ascending=False).head(
-        min(top_n, len(qualified_movies))
-    )[["id", "title_x", "weighted_rating", "predicted_rating", "final_score"]]
+    return qualified_movies
+
+
+# TMDb API Key
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
+
+def get_movie_poster(movie_id):
+    """
+    Fetch movie poster URL from TMDb API.
+
+    Parameters:
+    movie_id (int): The ID of the movie for which the poster is to be fetched.
+
+    Returns:
+    str: The complete URL of the movie poster if available, otherwise None.
+    """
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
+    response = requests.get(url)
+    data = response.json()
+
+    if "poster_path" in data and data["poster_path"]:
+        return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
+    return None
