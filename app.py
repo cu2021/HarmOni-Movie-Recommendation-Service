@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
-from my_modules.myModule import improved_hybrid_recommendations, get_movie_poster
+from my_modules.myModule import (
+    improved_hybrid_recommendations,
+    get_movie_poster,
+    genre_based_recommender,
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,6 +63,52 @@ def recommend():
                 "data": {
                     "userId": userId,
                     "title": title,
+                    "recommendedMovies": result,
+                },
+            }
+        )
+
+    except ValueError as ve:
+        return jsonify({"status": False, "message": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"status": False, "message": str(e)}), 500
+
+
+@app.route("/genreBasedRecommendation", methods=["GET"])
+def genreBasedRecommendation():
+    """
+    Generate movie recommendations for a given user and movie title.
+
+    Query Parameters:
+    userId (int): The ID of the user for whom recommendations are to be generated.
+    title (str): The title of the movie for recommendation reference.
+    topN (int, optional): The number of top recommendations to return (default is 10).
+
+    Returns:
+    JSON: A response containing the user ID, requested title, and a list of recommended movies with their details.
+    """
+    try:
+        genre = request.args.get("genre")
+        topN = int(request.args.get("topN", 100))
+
+        if not genre:
+            return jsonify({"error": "Movie genre is required"}), 400
+
+        # Get recommendations
+        recommendations = genre_based_recommender(genre=genre, top_n=topN)
+
+        # Convert DataFrame to JSON and fetch movie posters
+        result = recommendations.to_dict(orient="records")
+
+        for movie in result:
+            movie["poster_url"] = get_movie_poster(movie)
+
+        return jsonify(
+            {
+                "status": True,
+                "message": "",
+                "data": {
+                    "genre": genre,
                     "recommendedMovies": result,
                 },
             }

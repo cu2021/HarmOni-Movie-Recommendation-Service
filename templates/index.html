@@ -8,15 +8,28 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎬Hybrid Movie Recommendation System</h1>
-        <p>Enter your User ID and a Movie Title to get recommendations.</p>
+        <h1>🎬 Hybrid Movie Recommendation System</h1>
+        <p>Choose a recommendation method and enter the required details.</p>
 
         <form id="recommendationForm">
-            <label for="userId">User ID:</label>
-            <input type="number" id="userId" name="userId" required>
+            <label for="recommendationType">Recommendation Type:</label>
+            <select id="recommendationType" name="recommendationType">
+                <option value="movie">Movie-Based Recommendation</option>
+                <option value="genre">Genre-Based Recommendation</option>
+            </select>
 
-            <label for="title">Movie Title:</label>
-            <input type="text" id="title" name="title" required>
+            <div id="movieBasedFields">
+                <label for="userId">User ID:</label>
+                <input type="number" id="userId" name="userId" required>
+
+                <label for="title">Movie Title:</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+
+            <div id="genreBasedFields" style="display: none;">
+                <label for="genre">Genre:</label>
+                <input type="text" id="genre" name="genre">
+            </div>
 
             <label for="topN">Number of Recommendations:</label>
             <input type="number" id="topN" name="topN" value="10" required>
@@ -30,7 +43,6 @@
         </div>
     </div>
 
-    <script src="{{ url_for( 'static' , filename='main.js' )}}">
-    </script>
+    <script src="{{ url_for( 'static' , filename='main.js' )}}"></script>
 </body>
 </html>
