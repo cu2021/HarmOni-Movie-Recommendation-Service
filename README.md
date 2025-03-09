@@ -56,16 +56,24 @@ To set up the HarmOni Movie Recommendation Service locally, follow these steps:
 ## Usage
 
 - **Homepage**: Enter a User ID and a Movie Title to receive recommendations.
-- **API Endpoint**: Use `/recommend` with the following query parameters:
-  - `userId`: The user ID.
-  - `title`: The movie title.
-  - `topN`: The number of recommendations (default: 10).
+- **API Endpoint**:
+   - Use `/recommend` with the following query parameters:
+     - `userId`: The user ID.
+     - `title`: The movie title.
+     - `topN`: The number of recommendations (default: 10).
 
-  Example API request:
-  ```
-  http://127.0.0.1:5000/recommend?userId=1&title=Inception&topN=10
-  ```
-
+     Example API request:
+     ```
+     http://127.0.0.1:5000/recommend?userId=1&title=Inception&topN=10
+     ```
+   - Use `/genreBasedRecommendation` with the following query parameters:
+      - `genre`: The genre you like.
+      - `topN`:  The number of recommendations (default: 100).
+     
+     Example API request:
+     ```
+     http://127.0.0.1:5000/genreBasedRecommendation?genre=Animation&topN=21
+     ```
 ## Contributing
 
 Contributions are welcome! To contribute:
