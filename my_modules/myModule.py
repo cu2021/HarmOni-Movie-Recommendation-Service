@@ -1,6 +1,7 @@
 import requests
 import numpy as np
 import pandas as pd
+import datetime as dt
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import load_npz
 from surprise import PredictionImpossible
@@ -369,3 +370,112 @@ def get_movie_poster(movie):
         if "poster_path" in movie_data and movie_data["poster_path"]:
             return f"https://image.tmdb.org/t/p/w500{movie_data['poster_path']}"
     return None
+
+# Genre-Based Recommender
+C = new_df['vote_average'].mean()
+m = new_df['vote_count'].quantile(0.95)
+current_year = dt.datetime.now().year
+
+def preprocess_movies(df):
+    """
+    Preprocesses a DataFrame containing movie data by extracting genres as lowercase lists 
+    and converting release dates to years.
+
+    This function ensures that the 'genres' column is properly formatted as a list of lowercase 
+    genre names and extracts the release year from the 'release_date' column.
+
+    Args:
+        df (pd.DataFrame): A DataFrame containing movie data with at least 'genres' and 'release_date' columns.
+
+    Returns:
+        pd.DataFrame: A processed DataFrame with two new columns:
+            - 'genres_list': A list of lowercase genre names.
+            - 'release_year': The extracted release year as an integer.
+    """
+    
+    df = df.copy()
+
+    # Ensure genres are properly formatted as lists
+    def process_genres(x):
+        if isinstance(x, list):  # Already a list, just lowercase it
+            return [g.lower() for g in x]
+        if isinstance(x, str):  # If stored as string, attempt conversion
+            try:
+                genres = eval(x)  # Convert string to list
+                return [g.lower() for g in genres] if isinstance(genres, list) else []
+            except (SyntaxError, ValueError):
+                return []
+        return []  # Return empty list for NaN or unexpected types
+
+    df['genres_list'] = df['genres'].apply(process_genres)
+    print(df['genres_list'].head())
+    df['release_year'] = pd.to_datetime(df['release_date'], errors='coerce').dt.year
+    print(df['release_year'].head())
+
+    return df
+
+new_df2 = preprocess_movies(new_df)
+
+
+
+def genre_based_recommender(genre, df=new_df2, top_n=100):
+
+    """
+    Recommends top movies based on a given genre, prioritizing relevance and quality.
+
+    This function filters movies containing the specified genre, applies a weighted rating formula, 
+    accounts for the genre's position within a movie's genre list, applies an age penalty for older movies, 
+    and ranks the results based on multiple factors.
+
+    Args:
+        genre (str): The target genre for recommendations.
+        df (pd.DataFrame, optional): A DataFrame containing movie data with columns:
+            - 'genres_list': A list of lowercase genre names.
+            - 'vote_count': The number of votes received by the movie.
+            - 'vote_average': The average rating of the movie.
+            - 'release_year': The year of release for the movie.
+            - 'popularity': The popularity score of the movie.
+            - 'poster_path': The URL path to the movie's poster.
+            - 'title': The title of the movie.
+            - 'release_date': The release date of the movie.
+        top_n (int, optional): The number of top recommendations to return. Defaults to 100.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the top recommended movies with columns:
+            - 'poster_path': The URL path to the movie's poster.
+            - 'title': The movie title.
+            - 'release_date': The movie's release date.
+
+    Notes:
+        - The function applies a weighted rating formula that balances vote count and average rating.
+        - A genre index is used to prioritize movies where the genre appears earlier in the list.
+        - An age penalty is applied to reduce the weight of older movies.
+        - The final ranking considers genre relevance, adjusted score, and popularity.
+    """
+    # Insure that all genres are in the same alphabetical case
+    genre = genre.lower()
+
+    # Filter movies containing the genre efficiently
+    genre_movies = df[df['genres_list'].apply(lambda genres: genre in genres)].copy()
+
+    # Vectorized calculations for weighted rating
+    v = genre_movies['vote_count']
+    R = genre_movies['vote_average']
+    genre_movies['weighted_rating'] = (v / (v + m) * R) + (m / (v + m) * C)
+
+    # Calculate genre index for prioritization
+    genre_movies['genre_index'] = genre_movies['genres_list'].apply(lambda x: x.index(genre))
+
+    # Apply age penalty (vectorized)
+    genre_movies['age_penalty'] = (1 - 0.02 * (current_year - genre_movies['release_year'])).clip(lower=0.5)
+
+    # Adjust final score
+    genre_movies['adjusted_score'] = genre_movies['weighted_rating'] * genre_movies['age_penalty']
+
+    # Sort results by relevance and quality
+    top_movies = genre_movies.sort_values(
+        by=['genre_index', 'adjusted_score', 'popularity'],
+        ascending=[True, False, False]
+    ).head(top_n)
+
+    return top_movies[['id','poster_path', 'title', 'release_date']]
