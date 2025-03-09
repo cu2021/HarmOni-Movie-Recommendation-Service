@@ -408,9 +408,7 @@ def preprocess_movies(df):
         return []  # Return empty list for NaN or unexpected types
 
     df['genres_list'] = df['genres'].apply(process_genres)
-    print(df['genres_list'].head())
     df['release_year'] = pd.to_datetime(df['release_date'], errors='coerce').dt.year
-    print(df['release_year'].head())
 
     return df
 
