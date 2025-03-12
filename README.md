@@ -1,6 +1,6 @@
 # HarmOni Movie Recommendation Service
 
-HarmOni Movie Recommendation Service is a sophisticated movie recommendation service designed to provide personalized movie suggestions based on user preferences and movie popularity. Developed using Python and Flask, it employs a hybrid recommendation system that integrates content-based filtering with Singular Value Decomposition (SVD) collaborative filtering, along with popularity filtering from the Internet Movie Database ([IMDB](https://www.imdb.com/)).
+HarmOni Movie Recommendation Service is a sophisticated movie recommendation system that provides personalized movie suggestions based on user preferences and popularity. Developed using Python and Flask, it employs a hybrid recommendation approach integrating content-based filtering, Singular Value Decomposition (SVD) collaborative filtering, and popularity filtering from the Internet Movie Database ([IMDB](https://www.imdb.com/)).
 
 ## Features
 
@@ -8,6 +8,7 @@ HarmOni Movie Recommendation Service is a sophisticated movie recommendation ser
 - **Movie Poster Retrieval**: Fetches movie posters using the TMDb API.
 - **Lightweight Flask API**: Delivers recommendations through a RESTful API.
 - **User-Friendly Interface**: Provides a simple HTML-based frontend for user interaction and recommendation display.
+- **Dockerized Deployment**: Easily run the application as a containerized service.
 
 ## Project Structure
 
@@ -18,13 +19,15 @@ The repository is organized as follows:
 - `models/`: Stores the pre-trained SVD model for collaborative filtering.
 - `my_modules/`: Houses core functionalities, including recommendation logic.
 - `static/`: Contains frontend assets such as JavaScript and CSS.
-- `templates/`: Stores HTML templates for the frontend.
+- `templates/`: Stores HTML templates for the front-end.
 - `venv/`: Virtual environment directory (excluded from Git tracking).
 - `requirements.txt`: Lists required Python dependencies for the project.
+- `Dockerfile`: Defines the containerized environment for deployment.
+- `docker-compose.yml`: Configuration for running the service with Docker.
 
-## Installation
+## Installation (Dockerized Deployment)
 
-To set up the HarmOni Movie Recommendation Service locally, follow these steps:
+To set up and run the HarmOni Movie Recommendation Service using Docker, follow these steps:
 
 1. **Clone the repository**:
    ```bash
@@ -32,26 +35,18 @@ To set up the HarmOni Movie Recommendation Service locally, follow these steps:
    cd HarmOni-Movie-Recommendation-Service
    ```
 
-2. **Create and activate a virtual environment**:
+2. **Build and Run the Docker Container**:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   docker build -t harmoni-movie-recommendation .
+   docker run -p 5000:5000 harmoni-movie-recommendation
    ```
+   The service will now be running locally. Access it in your web browser at `http://172.17.0.2:5000/`.
 
-3. **Install the required dependencies**:
+Alternatively, you can use Docker Compose for easier management:
+
    ```bash
-   pip install -r requirements.txt
+   docker-compose up --build
    ```
-
-4. **Set up environment variables**:
-   - Rename `.env.example` to `.env`.
-   - Update the `.env` file with the necessary environment variables (e.g., `TMDB_API_KEY`).
-
-5. **Run the application**:
-   ```bash
-   python app.py
-   ```
-   The service will now be running locally. Access it in your web browser at `http://127.0.0.1:5000/`.
 
 ## Usage
 
@@ -64,7 +59,7 @@ To set up the HarmOni Movie Recommendation Service locally, follow these steps:
 
      Example API request:
      ```
-     http://127.0.0.1:5000/recommend?userId=1&title=Inception&topN=10
+     http://172.17.0.2:5000/recommend?userId=1&title=Inception&topN=10
      ```
    - Use `/genreBasedRecommendation` with the following query parameters:
       - `genre`: The genre you like.
@@ -72,8 +67,9 @@ To set up the HarmOni Movie Recommendation Service locally, follow these steps:
      
      Example API request:
      ```
-     http://127.0.0.1:5000/genreBasedRecommendation?genre=Animation&topN=21
+     http://172.17.0.2:5000/genreBasedRecommendation?genre=Animation&topN=21
      ```
+
 ## Contributing
 
 Contributions are welcome! To contribute:
@@ -88,4 +84,3 @@ Contributions are welcome! To contribute:
 ## Acknowledgments
 
 Special thanks to the open-source community for their invaluable resources.
-
